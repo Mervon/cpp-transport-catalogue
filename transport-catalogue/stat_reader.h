@@ -5,6 +5,7 @@
 #include <set>
 #include <iostream>
 #include <string_view>
+#include <unordered_set>
 
 namespace TransportCatalogue {
 
@@ -17,7 +18,7 @@ struct Response {
 struct ResponseForBus {
     std::string bus_name;
     size_t stops_count = 0;
-    size_t unique_stops = 0;
+    size_t unique_stops_count = 0;
     double route_real_lenght = 0;
     double curvature = 0;
     bool is_bus_exist;

@@ -28,7 +28,7 @@ void PrintStopResponse(ResponseForStop& r) {
 
 void PrintBusResponse(ResponseForBus& r) {
     if (r.is_bus_exist) {
-        std::cout << std::setprecision(6) << "Bus "s << r.bus_name << ": "s << r.stops_count << " stops on route, "s << r.unique_stops << " unique stops, "s << r.route_real_lenght << " route length, "s << r.curvature << " curvature"s << std::endl;
+        std::cout << std::setprecision(6) << "Bus "s << r.bus_name << ": "s << r.stops_count << " stops on route, "s << r.unique_stops_count << " unique stops, "s << r.route_real_lenght << " route length, "s << r.curvature << " curvature"s << std::endl;
     } else {
         std::cout << "Bus "s << r.bus_name << ": not found"s << std::endl;
     }
