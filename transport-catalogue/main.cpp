@@ -1,7 +1,7 @@
-#include "transport_catalogue.cpp"
-#include "input_reader.cpp"
-#include "stat_reader.cpp"
-#include "geo.cpp"
+#include "transport_catalogue.h"
+#include "input_reader.h"
+#include "stat_reader.h"
+#include "geo.h"
 
 #include <iostream>
 #include <cassert>
