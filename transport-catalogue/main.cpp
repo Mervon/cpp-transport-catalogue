@@ -1,7 +1,7 @@
-#include "transport_catalogue.h"
-#include "input_reader.h"
-#include "stat_reader.h"
-#include "geo.h"
+#include "transport_catalogue.cpp"
+#include "input_reader.cpp"
+#include "stat_reader.cpp"
+#include "geo.cpp"
 
 #include <iostream>
 #include <cassert>
@@ -24,10 +24,10 @@ int main( ) {
     for (auto& response : responses) {
         if (response.is_for_bus) {
             ResponseForBus r = tc.GetBusResponse(response.responses_for_bus);
-            PrintBusResponse(r);
+            PrintBusResponse(r, std::cout);
         } else {
             ResponseForStop r = tc.GetStopResponse(response.responses_for_stop);
-            PrintStopResponse(r);
+            PrintStopResponse(r, std::cout);
         }
     }
 

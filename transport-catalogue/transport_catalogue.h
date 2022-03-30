@@ -45,6 +45,9 @@ public:
 
     void InitStopnameToBuses();
 
+    void InitStops(std::vector<Stop>& stops, std::map<stops_key, double>& real_distances);
+
+    void InitBuses(std::vector<std::pair<std::string, std::deque<std::string>>>& buses);
 private:
     std::deque<Stop> stops_;
     std::deque<Bus> buses_;

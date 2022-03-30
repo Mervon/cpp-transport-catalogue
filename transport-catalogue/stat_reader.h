@@ -33,9 +33,9 @@ struct ResponseForStop {
 
 namespace OutputFunctions{
 
-void PrintStopResponse(ResponseForStop& r);
+void PrintStopResponse(ResponseForStop& r, std::ostream& os);
 
-void PrintBusResponse(ResponseForBus& r);
+void PrintBusResponse(ResponseForBus& r, std::ostream& os);
 }
 }
 

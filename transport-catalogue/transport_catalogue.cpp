@@ -21,46 +21,8 @@ size_t TransportCatalogue::MyHaser::operator()(const std::pair<Stop*, Stop*>& p)
 }
 
 TransportCatalogue::TransportCatalogue(std::vector<Stop>& stops, std::vector<std::pair<std::string, std::deque<std::string>>>& buses, std::map<stops_key, double>& real_distances) {
-    for (auto& stop : stops) {
-        stops_.push_back(stop);
-        stopname_to_stop_[stops_.back().stop_name] = &(stops_.back());
-    }
-    for (auto& distance : real_distances) {
-        real_distances_[{(*(stopname_to_stop_.find(distance.first.first))).second, (*(stopname_to_stop_.find(distance.first.second))).second}] = distance.second;
-    }
-    for (auto& bus : buses) {
-        buses_.push_back({bus.first, {}, 0, 0, 0});
-        for (auto& stop_name : bus.second) {
-            buses_.back().bus_stops.push_back( (*(stopname_to_stop_.find(stop_name))).second  );
-        }
-        busname_to_bus_[buses_.back().bus_name] = &(buses_.back());
-        {
-            set<string> tmp_set;
-            for (auto& stop : buses_.back().bus_stops) {
-                tmp_set.insert(stop->stop_name);
-            }
-            buses_.back().unique_stops_count = tmp_set.size();
-        }
-        vector<Stop*>::iterator it_to_stops_start = (buses_.back().bus_stops).begin();
-        vector<Stop*>::iterator it_to_stops_start_2 = ++buses_.back().bus_stops.begin();
-        for (size_t i = 0; i < buses_.back().bus_stops.size() - 1; ++i) {
-            buses_.back().route_unreal_lenght += ComputeDistance((*it_to_stops_start)->stop_coords, (*it_to_stops_start_2)->stop_coords);
-            ++it_to_stops_start;
-            ++it_to_stops_start_2;
-        }
-
-        it_to_stops_start = buses_.back().bus_stops.begin();
-        it_to_stops_start_2 = ++buses_.back().bus_stops.begin();;
-        for (size_t i = 0; i < buses_.back().bus_stops.size() - 1; ++i) {
-            if (real_distances_.find( {*it_to_stops_start, *it_to_stops_start_2} ) != real_distances_.end()) {
-                buses_.back().route_real_lenght += real_distances_[{*it_to_stops_start, *it_to_stops_start_2}];
-            } else {
-                buses_.back().route_real_lenght += real_distances_[{*it_to_stops_start_2, *it_to_stops_start}];
-            }
-            ++it_to_stops_start;
-            ++it_to_stops_start_2;
-        }
-    }
+    InitStops(stops, real_distances);
+    InitBuses(buses);
     InitStopnameToBuses();
 }
 
@@ -115,5 +77,50 @@ void TransportCatalogue::InitStopnameToBuses() {
             stopname_to_buses_[stop->stop_name].insert(name);
         }
     }
+}
+
+void TransportCatalogue::InitStops(std::vector<Stop>& stops, std::map<stops_key, double>& real_distances) {
+    for (auto& stop : stops) {
+        stops_.push_back(stop);
+        stopname_to_stop_[stops_.back().stop_name] = &(stops_.back());
+    }
+    for (auto& distance : real_distances) {
+        real_distances_[{(*(stopname_to_stop_.find(distance.first.first))).second, (*(stopname_to_stop_.find(distance.first.second))).second}] = distance.second;
+    }
+}
+
+void TransportCatalogue::InitBuses(std::vector<std::pair<std::string, std::deque<std::string>>>& buses) {
+    for (auto& bus : buses) {
+        buses_.push_back({bus.first, {}, 0, 0, 0});
+    for (auto& stop_name : bus.second) {
+        buses_.back().bus_stops.push_back( (*(stopname_to_stop_.find(stop_name))).second  );
+    }
+    busname_to_bus_[buses_.back().bus_name] = &(buses_.back());
+    {
+        set<string> tmp_set;
+        for (auto& stop : buses_.back().bus_stops) {
+            tmp_set.insert(stop->stop_name);
+        }
+        buses_.back().unique_stops_count = tmp_set.size();
+    }
+    vector<Stop*>::iterator it_to_stops_start = (buses_.back().bus_stops).begin();
+    vector<Stop*>::iterator it_to_stops_start_2 = ++buses_.back().bus_stops.begin();
+    for (size_t i = 0; i < buses_.back().bus_stops.size() - 1; ++i) {
+        buses_.back().route_unreal_lenght += ComputeDistance((*it_to_stops_start)->stop_coords, (*it_to_stops_start_2)->stop_coords);
+        ++it_to_stops_start;
+        ++it_to_stops_start_2;
+    }
+    it_to_stops_start = buses_.back().bus_stops.begin();
+    it_to_stops_start_2 = ++buses_.back().bus_stops.begin();;
+    for (size_t i = 0; i < buses_.back().bus_stops.size() - 1; ++i) {
+        if (real_distances_.find( {*it_to_stops_start, *it_to_stops_start_2} ) != real_distances_.end()) {
+            buses_.back().route_real_lenght += real_distances_[{*it_to_stops_start, *it_to_stops_start_2}];
+        } else {
+            buses_.back().route_real_lenght += real_distances_[{*it_to_stops_start_2, *it_to_stops_start}];
+        }
+        ++it_to_stops_start;
+        ++it_to_stops_start_2;
+    }
+}
 }
 }
