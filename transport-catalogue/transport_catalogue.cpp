@@ -1,6 +1,8 @@
 #include "geo.h"
 #include "transport_catalogue.h"
+#include "svg.h"
 
+#include <algorithm>
 #include <string>
 #include <set>
 #include <vector>
@@ -20,13 +22,13 @@ size_t TransportCatalogue::MyHaser::operator()(const std::pair<Stop*, Stop*>& p)
     return result;
 }
 
-TransportCatalogue::TransportCatalogue(std::vector<Stop>& stops, std::vector<std::pair<std::string, std::deque<std::string>>>& buses, std::map<stops_key, double>& real_distances) {
+TransportCatalogue::TransportCatalogue(std::vector<Stop>& stops, std::vector<std::pair<std::string, std::deque<std::string>>>& buses, std::map<stops_key, double>& real_distances, map<string, AditionalInfo>& aditional_info) : aditional_info_(aditional_info) {
     InitStops(stops, real_distances);
     InitBuses(buses);
     InitStopnameToBuses();
 }
 
-ResponseForBus TransportCatalogue::GetBusResponse(string& bus_name) {
+::ResponseForBus TransportCatalogue::GetBusResponse(string& bus_name) {
     ResponseForBus result;
     result.bus_name = bus_name;
 
@@ -50,7 +52,7 @@ ResponseForBus TransportCatalogue::GetBusResponse(string& bus_name) {
     return result;
 }
 
-ResponseForStop TransportCatalogue::GetStopResponse(string& stop_name) {
+::ResponseForStop TransportCatalogue::GetStopResponse(string& stop_name) {
     ResponseForStop result;
     result.stop_name = stop_name;
 
@@ -91,7 +93,7 @@ void TransportCatalogue::InitStops(std::vector<Stop>& stops, std::map<stops_key,
 
 void TransportCatalogue::InitBuses(std::vector<std::pair<std::string, std::deque<std::string>>>& buses) {
     for (auto& bus : buses) {
-        buses_.push_back({bus.first, {}, 0, 0, 0});
+        buses_.push_back({svg::NoneColor, bus.first, {}, 0, 0, 0});
     for (auto& stop_name : bus.second) {
         buses_.back().bus_stops.push_back( (*(stopname_to_stop_.find(stop_name))).second  );
     }
@@ -123,4 +125,48 @@ void TransportCatalogue::InitBuses(std::vector<std::pair<std::string, std::deque
     }
 }
 }
+
+vector<geo::Coordinates> TransportCatalogue::GetAllCoords() {
+    vector<geo::Coordinates> result;
+    for (auto& stop : stops_) {
+        if (stopname_to_buses_.find(stop.stop_name) != stopname_to_buses_.end()) {
+            if (stopname_to_buses_.at(stop.stop_name).size() != 0) {
+                result.push_back(stop.stop_coords);
+            }
+        }
+    }
+    return result;
+}
+
+std::deque<Bus> TransportCatalogue::GetAllBusesSortedByName() {
+    std::deque<Bus> buses_copy = buses_;
+    sort(buses_copy.begin(), buses_copy.end(), [](const Bus& lhs, const Bus& rhs){
+         return lhs.bus_name < rhs.bus_name;});
+    return buses_copy;
+}
+
+std::map<std::string, AditionalInfo>& TransportCatalogue::GetAditionalInfo() {
+    return aditional_info_;
+}
+
+Stop* TransportCatalogue::GetStopByName(const std::string& name) {
+    return stopname_to_stop_[name];
+}
+
+std::deque<Stop> TransportCatalogue::GetAllStopsSortedByName() {
+    std::deque<Stop> stops_copy = stops_;
+    sort(stops_copy.begin(), stops_copy.end(), [](const Stop& lhs, const Stop& rhs){
+         return lhs.stop_name < rhs.stop_name;});
+    return stops_copy;
+}
+
+bool TransportCatalogue::HaveBuses(const std::string& s) {
+    if (stopname_to_buses_.find(s) != stopname_to_buses_.end()) {
+        if (stopname_to_buses_.at(s).size() != 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 }

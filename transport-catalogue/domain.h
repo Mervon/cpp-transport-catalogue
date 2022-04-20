@@ -1,13 +1,25 @@
 #pragma once
 
+#include "geo.h"
+#include "svg.h"
+
 #include <vector>
 #include <string>
 #include <set>
-#include <iostream>
-#include <string_view>
-#include <unordered_set>
 
-namespace TransportCatalogue {
+struct Stop {
+    std::string stop_name;
+    geo::Coordinates stop_coords;
+};
+
+struct Bus {
+    svg::Color color;
+    std::string bus_name;
+    std::vector<Stop*> bus_stops;
+    int unique_stops_count = 0;
+    double route_unreal_lenght = 0;
+    double route_real_lenght = 0;
+};
 
 struct Response {
     std::string responses_for_stop;
@@ -31,11 +43,6 @@ struct ResponseForStop {
     bool is_buses_exists;
 };
 
-namespace OutputFunctions{
-
-void PrintStopResponse(ResponseForStop& r, std::ostream& os);
-
-void PrintBusResponse(ResponseForBus& r, std::ostream& os);
-}
-}
-
+struct AditionalInfo{
+    std::string last_stop;
+};
