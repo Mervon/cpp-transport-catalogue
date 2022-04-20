@@ -28,7 +28,7 @@ TransportCatalogue::TransportCatalogue(std::vector<Stop>& stops, std::vector<std
     InitStopnameToBuses();
 }
 
-::ResponseForBus TransportCatalogue::GetBusResponse(string& bus_name) {
+::ResponseForBus TransportCatalogue::GetBusResponse(const std::string& bus_name) const {
     ResponseForBus result;
     result.bus_name = bus_name;
 
@@ -52,7 +52,7 @@ TransportCatalogue::TransportCatalogue(std::vector<Stop>& stops, std::vector<std
     return result;
 }
 
-::ResponseForStop TransportCatalogue::GetStopResponse(string& stop_name) {
+::ResponseForStop TransportCatalogue::GetStopResponse(std::string& stop_name) {
     ResponseForStop result;
     result.stop_name = stop_name;
 
@@ -138,7 +138,7 @@ vector<geo::Coordinates> TransportCatalogue::GetAllCoords() {
     return result;
 }
 
-std::deque<Bus> TransportCatalogue::GetAllBusesSortedByName() {
+std::deque<Bus> TransportCatalogue::GetAllBusesSortedByName() const {
     std::deque<Bus> buses_copy = buses_;
     sort(buses_copy.begin(), buses_copy.end(), [](const Bus& lhs, const Bus& rhs){
          return lhs.bus_name < rhs.bus_name;});
@@ -153,7 +153,7 @@ Stop* TransportCatalogue::GetStopByName(const std::string& name) {
     return stopname_to_stop_[name];
 }
 
-std::deque<Stop> TransportCatalogue::GetAllStopsSortedByName() {
+std::deque<Stop> TransportCatalogue::GetAllStopsSortedByName() const {
     std::deque<Stop> stops_copy = stops_;
     sort(stops_copy.begin(), stops_copy.end(), [](const Stop& lhs, const Stop& rhs){
          return lhs.stop_name < rhs.stop_name;});
@@ -167,6 +167,10 @@ bool TransportCatalogue::HaveBuses(const std::string& s) {
         }
     }
     return false;
+}
+
+const std::set<std::string_view>& TransportCatalogue::GetBusesByStop(const std::string_view& stop_name) const {
+    return stopname_to_buses_.at(stop_name);
 }
 
 }

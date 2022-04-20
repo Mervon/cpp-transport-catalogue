@@ -5,7 +5,7 @@
 
 using namespace std;
 
-void Renderer::Solve(std::ostream& os) {
+svg::Document MapRenderer::Solve() {
     svg::Document document;
     vector<geo::Coordinates> coords_for_sphere_projector = transport_catalogue_.GetAllCoords();
     SphereProjector sp(coords_for_sphere_projector.begin(), coords_for_sphere_projector.end(), render_settings_.width, render_settings_.height, render_settings_.padding);
@@ -17,10 +17,10 @@ void Renderer::Solve(std::ostream& os) {
     DrawStopNames(document, stops);
     DrawCircles(document, stops);
 
-    PrintResult(document, os);
+    return document;
 }
 
-void Renderer::PrintResult(svg::Document& document, std::ostream& os) {
+void MapRenderer::PrintResult(svg::Document& document, std::ostream& os) {
     ostringstream os2;
     document.Render(os2);
     json::Node node(os2.str());
@@ -28,7 +28,7 @@ void Renderer::PrintResult(svg::Document& document, std::ostream& os) {
     json::Print(doc, os);
 }
 
-svg::Color& Renderer::GetNextColor(int& color_index, int max_color_index) {
+svg::Color& MapRenderer::GetNextColor(int& color_index, int max_color_index) {
     if (color_index > max_color_index) {
         color_index = 0;
     }
@@ -47,15 +47,15 @@ svg::Point SphereProjector::operator()(geo::Coordinates coords) const {
                 (max_lat_ - coords.lat) * zoom_coeff_ + padding_};
     }
 
-Renderer::Renderer(RenderSettings& render_settings, TransportCatalogue::TransportCatalogue& tc) : render_settings_(render_settings), transport_catalogue_(tc) {
+MapRenderer::MapRenderer(RenderSettings& render_settings, TransportCatalogue::TransportCatalogue& tc) : render_settings_(render_settings), transport_catalogue_(tc) {
 
 }
 
-void Renderer::LinkSphereProjector(const SphereProjector& sp) {
+void MapRenderer::LinkSphereProjector(const SphereProjector& sp) {
     sphere_projector_ = sp;
 }
 
-void Renderer::DrawLines(svg::Document& document, deque<Bus>& buses) {
+void MapRenderer::DrawLines(svg::Document& document, deque<Bus>& buses) {
     int max_color_index = 0;
     if (render_settings_.color_palette.size() != 0) {
         max_color_index = static_cast<int>(render_settings_.color_palette.size()) - 1;
@@ -93,7 +93,7 @@ void Renderer::DrawLines(svg::Document& document, deque<Bus>& buses) {
     }
 }
 
-void Renderer::DrawFirstAndLastStop(svg::Document& document, deque<Bus>& buses) {
+void MapRenderer::DrawFirstAndLastStop(svg::Document& document, deque<Bus>& buses) {
     for (auto& bus : buses) {
         if (bus.bus_stops.size() == 0) {
             continue;
@@ -165,7 +165,7 @@ void Renderer::DrawFirstAndLastStop(svg::Document& document, deque<Bus>& buses) 
     }
 }
 
-void Renderer::DrawStopNames(svg::Document& document, deque<Stop>& stops) {
+void MapRenderer::DrawStopNames(svg::Document& document, deque<Stop>& stops) {
     for (auto& stop : stops) {
         if (transport_catalogue_.HaveBuses(stop.stop_name)) {
             Stop* stop_pointer = transport_catalogue_.GetStopByName(stop.stop_name);
@@ -181,7 +181,7 @@ void Renderer::DrawStopNames(svg::Document& document, deque<Stop>& stops) {
     }
 }
 
-void Renderer::DrawCircles(svg::Document& document, deque<Stop>& stops) {
+void MapRenderer::DrawCircles(svg::Document& document, deque<Stop>& stops) {
     for (auto& stop : stops) {
         if (transport_catalogue_.HaveBuses(stop.stop_name)) {
             Stop* stop_pointer = transport_catalogue_.GetStopByName(stop.stop_name);

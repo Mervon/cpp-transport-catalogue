@@ -13,26 +13,26 @@
 
 using namespace std;
 
-json_reader::json_reader(json::Document d) : main_document_(std::move(d)) {
+JsonReader::JsonReader(json::Document d) : main_document_(std::move(d)) {
 
 }
 
-json_reader::json_reader(std::string s) {
+JsonReader::JsonReader(std::string s) {
      LoadJSON(s);
 }
 
-json_reader::json_reader(std::istream& is, std::ostream& os) {
+JsonReader::JsonReader(std::istream& is, std::ostream& os) {
      main_document_ = json::Load(is);
      Solve(os);
 }
 
-std::string json_reader::Print() {
+std::string JsonReader::Print() {
     std::ostringstream os;
     json::Print(main_document_, os);
     return os.str();
 }
 
-void json_reader::Solve(std::ostream& os) {
+void JsonReader::Solve(std::ostream& os) {
     if (main_document_.GetRoot().IsMap()) {
         if (main_document_.GetRoot().AsMap().size() == 3) {
             for (auto& [key, arr] : main_document_.GetRoot().AsMap()) {
@@ -81,7 +81,7 @@ vector<svg::Color> GetColors(const json::Array& arr) {
     return result;
 }
 
-RenderSettings json_reader::ProcessRenderSettings(const json::Dict& dict) {
+RenderSettings JsonReader::ProcessRenderSettings(const json::Dict& dict) {
     RenderSettings render_settings;
     for (auto& [tag, value] : dict) {
         if (tag == "width"s) {
@@ -113,7 +113,7 @@ RenderSettings json_reader::ProcessRenderSettings(const json::Dict& dict) {
     return render_settings;
 }
 
-void json_reader::FillStop(const json::Dict& dict, std::string& name, std::pair<std::vector<Stop>, std::map<std::pair<std::string, std::string>, double>>& result) {
+void JsonReader::FillStop(const json::Dict& dict, std::string& name, std::pair<std::vector<Stop>, std::map<std::pair<std::string, std::string>, double>>& result) {
 
     Stop stop;
     stop.stop_name = name;
@@ -131,13 +131,13 @@ void json_reader::FillStop(const json::Dict& dict, std::string& name, std::pair<
     result.first.push_back(stop);
 }
 
-void json_reader::LoadDistances(const json::Dict& dict, std::map<std::pair<std::string, std::string>, double>& result, std::string& main_stop_name) {
+void JsonReader::LoadDistances(const json::Dict& dict, std::map<std::pair<std::string, std::string>, double>& result, std::string& main_stop_name) {
     for (auto& [stop_name, distance] : dict) {
         result[{main_stop_name, stop_name}] = distance.AsDouble();
     }
 }
 
-void json_reader::FillBus(const json::Dict& dict, std::string& name, std::vector<std::pair<std::string, std::deque<std::string>>>& buses, map<string, AditionalInfo>& aditional_info) {
+void JsonReader::FillBus(const json::Dict& dict, std::string& name, std::vector<std::pair<std::string, std::deque<std::string>>>& buses, map<string, AditionalInfo>& aditional_info) {
     buses.push_back({name, {}});
     bool is_round = false;
     for (auto& [tag, value] : dict) {
@@ -170,13 +170,13 @@ void json_reader::FillBus(const json::Dict& dict, std::string& name, std::vector
     }
 }
 
-void json_reader::LoadBusStops(std::vector<std::pair<std::string, std::deque<std::string>>>& result, const json::Array& arr) {
+void JsonReader::LoadBusStops(std::vector<std::pair<std::string, std::deque<std::string>>>& result, const json::Array& arr) {
     for (auto& stop_name : arr) {
         result.back().second.push_back(stop_name.AsString());
     }
 }
 
-void json_reader::ProcessFill(const json::Array& arr) {
+void JsonReader::ProcessFill(const json::Array& arr) {
 
     std::pair<std::vector<Stop>, std::map<std::pair<std::string, std::string>, double>> res1;
     std::vector<std::pair<std::string, std::deque<std::string>>> res2;
@@ -197,12 +197,12 @@ void json_reader::ProcessFill(const json::Array& arr) {
     transport_catalogue_ = std::move(transport_catalogue);
 }
 
-void json_reader::LoadJSON(std::string s) {
+void JsonReader::LoadJSON(std::string s) {
     std::istringstream is(s);
     main_document_ = json::Load(is);
 }
 
-std::pair<std::string, std::string> json_reader::CheckTypeAndName(const json::Dict& dict) {
+std::pair<std::string, std::string> JsonReader::CheckTypeAndName(const json::Dict& dict) {
     std::pair<std::string, std::string> result;
     for (auto& [tag, value] : dict) {
         if (tag == "type"s && value.AsString() == "Stop"s) {
@@ -216,7 +216,7 @@ std::pair<std::string, std::string> json_reader::CheckTypeAndName(const json::Di
     return result;
 }
 
-void json_reader::ProcessRequests(const json::Array& arr, std::ostream& os) {
+void JsonReader::ProcessRequests(const json::Array& arr, std::ostream& os) {
 
     int id;
     std::string type = "Unknown"s;
@@ -241,7 +241,7 @@ void json_reader::ProcessRequests(const json::Array& arr, std::ostream& os) {
     JsonPrinter(result, os);
 }
 
-void json_reader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, std::string>>>& requests, std::ostream& output) {
+void JsonReader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, std::string>>>& requests, std::ostream& output) {
     if (!requests.empty()) {
         bool is_first = false;
         output << "["s;
@@ -257,8 +257,9 @@ void json_reader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, 
                 Print(transport_catalogue_.GetStopResponse(item.second.second), output);
             } else if (item.second.first == "Map"s) {
                 output << "\"map\": "s;
-                Renderer r(render_settings_, transport_catalogue_);
-                r.Solve(output);
+                MapRenderer r(render_settings_, transport_catalogue_);
+                svg::Document doc = r.Solve();
+                r.PrintResult(doc, output);
             } else if (item.second.first == "Unknown"s) {
                 output << "\"error_message\": "s << "\"not found\""s;
             }
@@ -269,7 +270,7 @@ void json_reader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, 
     }
 }
 
-void json_reader::Print(ResponseForBus&& response, std::ostream& output) {
+void JsonReader::Print(ResponseForBus&& response, std::ostream& output) {
     if (response.is_bus_exist) {
         output << "\"curvature\": "s << response.curvature << ", "s;
         output << "\"route_length\": "s << response.route_real_lenght << ", "s;
@@ -280,7 +281,7 @@ void json_reader::Print(ResponseForBus&& response, std::ostream& output) {
     }
 }
 
-void json_reader::Print(ResponseForStop&& response, std::ostream& output) {
+void JsonReader::Print(ResponseForStop&& response, std::ostream& output) {
     if (response.is_stop_exists) {
         output << "\"buses\": ["s;
         if (response.is_buses_exists) {

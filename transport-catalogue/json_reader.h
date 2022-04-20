@@ -11,15 +11,15 @@
 #include <map>
 #include <algorithm>
 
-class json_reader {
+class JsonReader {
 public:
-    json_reader() = default;
+    JsonReader() = default;
 
-    json_reader(json::Document d);
+    JsonReader(json::Document d);
 
-    json_reader(std::string s);
+    JsonReader(std::string s);
 
-    json_reader(std::istream& is, std::ostream& os);
+    JsonReader(std::istream& is, std::ostream& os);
 
     std::string Print();
 

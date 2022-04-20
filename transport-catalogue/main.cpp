@@ -6,7 +6,7 @@ using namespace std;
 
 int main() {
 
-    json_reader jr(cin, cout);
+    JsonReader jr(cin, cout);
 
     return 0;
 }

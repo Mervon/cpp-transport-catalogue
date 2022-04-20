@@ -328,7 +328,7 @@ Document Load(istream& input) {
     return Document(LoadNode(input));
 }
 
-const Json_node& Node::GetRawValue() const {
+const JSONNode& Node::GetRawValue() const {
     return current_node_value_;
 }
 
@@ -358,7 +358,7 @@ struct RootPrinter {
             if (is_first) {
                 output << ", "s;
             }
-            visit(RootPrinter{output}, Json_node{item.first});
+            visit(RootPrinter{output}, JSONNode{item.first});
             output << ": ";
             visit(RootPrinter{output}, item.second.GetRawValue());
             is_first = true;

@@ -1,9 +1,17 @@
 #include "request_handler.h"
 
-/*
- * Здесь можно было бы разместить код обработчика запросов к базе, содержащего логику, которую не
- * хотелось бы помещать ни в transport_catalogue, ни в json reader.
- *
- * Если вы затрудняетесь выбрать, что можно было бы поместить в этот файл,
- * можете оставить его пустым.
- */
+RequestHandler::RequestHandler(const TransportCatalogue::TransportCatalogue& db, MapRenderer& renderer) : db_(db), renderer_(renderer) {
+
+}
+
+ResponseForBus RequestHandler::GetBusStat(const std::string& bus_name) const {
+    return db_.GetBusResponse(bus_name);
+}
+
+const std::set<std::string_view>& RequestHandler::GetBusesByStop(const std::string& stop_name) const {
+    return db_.GetBusesByStop(stop_name);
+}
+
+svg::Document RequestHandler::RenderMap() {
+    return renderer_.Solve();
+}

@@ -11,7 +11,7 @@ namespace json {
 class Node;
 using Dict = std::map<std::string, Node>;
 using Array = std::vector<Node>;
-using Json_node = std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>;
+using JSONNode = std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>;
 
 // Эта ошибка должна выбрасываться при ошибках парсинга JSON
 class ParsingError : public std::runtime_error {
@@ -37,7 +37,7 @@ public:
     const std::string& AsString() const;
     double AsDouble() const;
 
-    const Json_node& GetRawValue() const;
+    const JSONNode& GetRawValue() const;
 
     bool IsBool() const;
     bool IsNull() const;
@@ -51,7 +51,7 @@ public:
     bool operator==(const Node& rhs) const;
     bool operator!=(const Node& rhs) const;
 private:
-    Json_node current_node_value_;
+    JSONNode current_node_value_;
 };
 
 class Document {

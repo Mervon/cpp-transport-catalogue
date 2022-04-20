@@ -80,14 +80,16 @@ SphereProjector::SphereProjector(PointInputIt points_begin, PointInputIt points_
     }
 }
 
-class Renderer {
+class MapRenderer {
 public:
 
-    Renderer(RenderSettings& render_settings, TransportCatalogue::TransportCatalogue& tc);
+    MapRenderer(RenderSettings& render_settings, TransportCatalogue::TransportCatalogue& tc);
 
-    void LinkSphereProjector(const SphereProjector& sp);
+    void LinkSphereProjector(const SphereProjector& sp) ;
 
-    void Solve(std::ostream& os);
+    svg::Document Solve() ;
+
+    void PrintResult(svg::Document& document, std::ostream& os);
 
 private:
     SphereProjector sphere_projector_;
@@ -95,8 +97,6 @@ private:
     TransportCatalogue::TransportCatalogue& transport_catalogue_;
 
     svg::Color& GetNextColor(int& color_index, int max_index);
-
-    void PrintResult(svg::Document& document, std::ostream& os);
 
     void DrawLines(svg::Document& document, std::deque<Bus>& buses);
     void DrawFirstAndLastStop(svg::Document& document, std::deque<Bus>& buses);

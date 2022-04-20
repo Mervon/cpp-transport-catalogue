@@ -29,7 +29,7 @@ public:
 
     TransportCatalogue(std::vector<Stop>& stops, std::vector<std::pair<std::string, std::deque<std::string>>>& buses, std::map<stops_key, double>& real_distances, std::map<std::string, AditionalInfo>& aditional_info);
 
-    ResponseForBus GetBusResponse(std::string& bus_name);
+    ResponseForBus GetBusResponse(const std::string& bus_name) const ;
 
     ResponseForStop GetStopResponse(std::string& stop_name);
 
@@ -41,9 +41,9 @@ public:
 
     std::vector<geo::Coordinates> GetAllCoords();
 
-    std::deque<Bus> GetAllBusesSortedByName();
+    std::deque<Bus> GetAllBusesSortedByName() const ;
 
-    std::deque<Stop> GetAllStopsSortedByName();
+    std::deque<Stop> GetAllStopsSortedByName() const ;
 
     std::map<std::string, AditionalInfo>& GetAditionalInfo();
 
@@ -51,6 +51,7 @@ public:
 
     bool HaveBuses(const std::string& s);
 
+    const std::set<std::string_view>& GetBusesByStop(const std::string_view& stop_name) const;
 private:
 
     std::deque<Stop> stops_;
