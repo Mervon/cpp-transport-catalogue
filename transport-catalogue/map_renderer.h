@@ -89,7 +89,7 @@ public:
 
     svg::Document Solve() ;
 
-    void PrintResult(svg::Document& document, std::ostream& os);
+    std::string PrintResult(svg::Document& document);
 
 private:
     SphereProjector sphere_projector_;

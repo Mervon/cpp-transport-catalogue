@@ -20,12 +20,13 @@ svg::Document MapRenderer::Solve() {
     return document;
 }
 
-void MapRenderer::PrintResult(svg::Document& document, std::ostream& os) {
+string MapRenderer::PrintResult(svg::Document& document) {
     ostringstream os2;
     document.Render(os2);
-    json::Node node(os2.str());
+    /*json::Node node(os2.str());
     json::Document doc(node);
-    json::Print(doc, os);
+    json::Print(doc, os);*/
+    return os2.str();
 }
 
 svg::Color& MapRenderer::GetNextColor(int& color_index, int max_color_index) {

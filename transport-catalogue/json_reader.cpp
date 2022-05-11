@@ -33,13 +33,13 @@ std::string JsonReader::Print() {
 }
 
 void JsonReader::Solve(std::ostream& os) {
-    if (main_document_.GetRoot().IsMap()) {
-        if (main_document_.GetRoot().AsMap().size() == 3) {
-            for (auto& [key, arr] : main_document_.GetRoot().AsMap()) {
+    if (main_document_.GetRoot().IsDict()) {
+        if (main_document_.GetRoot().AsDict().size() == 3) {
+            for (auto& [key, arr] : main_document_.GetRoot().AsDict()) {
                 if (key == "base_requests"s) {
                     ProcessFill(arr.AsArray());
                 } else if (key == "render_settings"s){
-                    render_settings_ = ProcessRenderSettings(arr.AsMap());
+                    render_settings_ = ProcessRenderSettings(arr.AsDict());
                 } else if (key == "stat_requests"s) {
                     ProcessRequests(arr.AsArray(), os);
                 }
@@ -123,8 +123,8 @@ void JsonReader::FillStop(const json::Dict& dict, std::string& name, std::pair<s
         } else if (tag == "longitude"s) {
             stop.stop_coords.lng = value.AsDouble();
         } else if (tag == "road_distances"s) {
-            if (value.IsMap()) {
-                LoadDistances(value.AsMap(), result.second, name);
+            if (value.IsDict()) {
+                LoadDistances(value.AsDict(), result.second, name);
             }
         }
     }
@@ -182,8 +182,8 @@ void JsonReader::ProcessFill(const json::Array& arr) {
     std::vector<std::pair<std::string, std::deque<std::string>>> res2;
     std::map<std::string, AditionalInfo> aditional_info;
     for (auto& node : arr) {
-        if (node.IsMap()) {
-            const json::Dict& node_as_map = node.AsMap();
+        if (node.IsDict()) {
+            const json::Dict& node_as_map = node.AsDict();
             std::pair<std::string, std::string> type_and_name = CheckTypeAndName(node_as_map);
 
             if (type_and_name.first == "Stop"s) {
@@ -223,7 +223,7 @@ void JsonReader::ProcessRequests(const json::Array& arr, std::ostream& os) {
     std::string name;
     std::vector<std::pair<int, std::pair<std::string, std::string>>> result;
     for (auto& Node : arr) {
-        for (auto& [tag, value] : Node.AsMap()) {
+        for (auto& [tag, value] : Node.AsDict()) {
             if (tag == "type"s && value.AsString() == "Bus"s) {
                 type = "Bus"s;
             } else if (tag == "type"s && value.AsString() == "Stop"s) {
@@ -243,59 +243,51 @@ void JsonReader::ProcessRequests(const json::Array& arr, std::ostream& os) {
 
 void JsonReader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, std::string>>>& requests, std::ostream& output) {
     if (!requests.empty()) {
-        bool is_first = false;
-        output << "["s;
+        json::Builder builder;
+        builder.StartArray();
+
         for (auto& item : requests) {
-            if (is_first) {
-                output << ", "s;
-            }
-            output << "{"s;
-            output << "\"request_id\": "s << item.first << ", "s;
+            builder.StartDict();
+            builder.Key("request_id"s).Value(item.first);
             if (item.second.first == "Bus"s) {
-                Print(transport_catalogue_.GetBusResponse(item.second.second), output);
+                Print(transport_catalogue_.GetBusResponse(item.second.second), builder);
             } else if (item.second.first == "Stop"s) {
-                Print(transport_catalogue_.GetStopResponse(item.second.second), output);
+                Print(transport_catalogue_.GetStopResponse(item.second.second), builder);
             } else if (item.second.first == "Map"s) {
-                output << "\"map\": "s;
                 MapRenderer r(render_settings_, transport_catalogue_);
                 svg::Document doc = r.Solve();
-                r.PrintResult(doc, output);
+                builder.Key("map"s).Value(r.PrintResult(doc));
             } else if (item.second.first == "Unknown"s) {
-                output << "\"error_message\": "s << "\"not found\""s;
+                builder.Key("error_message"s).Value("not found"s);
             }
-            output << "}"s;
-            is_first = true;
+            builder.EndDict();
         }
-        output << "]"s;
+        builder.EndArray();
+        json::Print(json::Document{builder.Build()}, output);
     }
 }
 
-void JsonReader::Print(ResponseForBus&& response, std::ostream& output) {
+void JsonReader::Print(ResponseForBus&& response, json::Builder& builder) {
     if (response.is_bus_exist) {
-        output << "\"curvature\": "s << response.curvature << ", "s;
-        output << "\"route_length\": "s << response.route_real_lenght << ", "s;
-        output << "\"stop_count\": "s << response.stops_count << ", "s;
-        output << "\"unique_stop_count\": "s << response.unique_stops_count;
+        builder.Key("curvature"s).Value(response.curvature);
+        builder.Key("route_length"s).Value(response.route_real_lenght);
+        builder.Key("stop_count"s).Value(static_cast<int>(response.stops_count));
+        builder.Key("unique_stop_count"s).Value(static_cast<int>(response.unique_stops_count));
     } else {
-        output << "\"error_message\": "s << "\"not found\""s;
+        builder.Key("error_message"s).Value("not found"s);
     }
 }
 
-void JsonReader::Print(ResponseForStop&& response, std::ostream& output) {
+void JsonReader::Print(ResponseForStop&& response, json::Builder& builder) {
     if (response.is_stop_exists) {
-        output << "\"buses\": ["s;
+        builder.Key("buses"s).StartArray();
         if (response.is_buses_exists) {
-            bool is_first = false;
             for (auto& bus_name : response.bus_names) {
-                if (is_first) {
-                    output << ", "s;
-                }
-                output << "\""s << bus_name << "\""s;
-                is_first = true;
+                builder.Value(static_cast<string>(bus_name));
             }
         }
-        output << "]"s;
+        builder.EndArray();
     } else {
-        output << "\"error_message\": "s << "\"not found\""s;
+        builder.Key("error_message"s).Value("not found");
     }
 }

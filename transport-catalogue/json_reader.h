@@ -3,6 +3,7 @@
 #include "json.h"
 #include "transport_catalogue.h"
 #include "map_renderer.h"
+#include "json_builder.h"
 
 #include <utility>
 #include <string>
@@ -50,7 +51,7 @@ private:
 
     void JsonPrinter(std::vector<std::pair<int, std::pair<std::string, std::string>>>& requests, std::ostream& output);
 
-    void Print(ResponseForBus&& response, std::ostream& output);
+    void Print(ResponseForBus&& response, json::Builder& builder);
 
-    void Print(ResponseForStop&& response, std::ostream& output);
+    void Print(ResponseForStop&& response, json::Builder& builder);
 };
