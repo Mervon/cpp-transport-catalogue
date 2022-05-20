@@ -27,6 +27,7 @@ public:
 private:
     json::Document main_document_;
     RenderSettings render_settings_;
+    RoutingSettings routing_settings_;
     TransportCatalogue::TransportCatalogue transport_catalogue_;
 
     void Solve(std::ostream& os);
@@ -43,15 +44,19 @@ private:
 
     void LoadJSON(std::string s);
 
+    RoutingSettings& ProcessRoutingSettings(const json::Dict& dict);
+
     std::pair<std::string, std::string> CheckTypeAndName(const json::Dict& dict);
 
     RenderSettings ProcessRenderSettings(const json::Dict& dict);
 
     void ProcessRequests(const json::Array& arr, std::ostream& os);
 
-    void JsonPrinter(std::vector<std::pair<int, std::pair<std::string, std::string>>>& requests, std::ostream& output);
+    void JsonPrinter(std::vector<std::pair<int, std::pair<std::string, RequestInfo>>>& requests, std::ostream& output);
 
     void Print(ResponseForBus&& response, json::Builder& builder);
 
     void Print(ResponseForStop&& response, json::Builder& builder);
+
+    void Print(std::optional<graph::Router<double>::RouteInfo>&& route_info, json::Builder& builder);
 };

@@ -34,18 +34,41 @@ std::string JsonReader::Print() {
 
 void JsonReader::Solve(std::ostream& os) {
     if (main_document_.GetRoot().IsDict()) {
-        if (main_document_.GetRoot().AsDict().size() == 3) {
+        if (main_document_.GetRoot().AsDict().size() == 4) {
             for (auto& [key, arr] : main_document_.GetRoot().AsDict()) {
                 if (key == "base_requests"s) {
+
                     ProcessFill(arr.AsArray());
+
                 } else if (key == "render_settings"s){
+
                     render_settings_ = ProcessRenderSettings(arr.AsDict());
+
                 } else if (key == "stat_requests"s) {
+
                     ProcessRequests(arr.AsArray(), os);
+
+                } else if (key == "routing_settings") {
+
+                    transport_catalogue_.ProcessGraph(ProcessRoutingSettings(arr.AsDict()));
+
                 }
             }
         }
     }
+}
+
+RoutingSettings& JsonReader::ProcessRoutingSettings(const json::Dict& dict) {
+    RoutingSettings settings;
+    for (auto& [key, value] : dict) {
+        if (key == "bus_wait_time"sv) {
+            settings.bus_wait_time_ = value.AsInt();
+        } else if (key == "bus_velocity"sv) {
+            settings.bus_velocity = value.AsDouble();
+        }
+    }
+    routing_settings_ = move(settings);
+    return routing_settings_;
 }
 
 svg::Color GetColor(const json::Node& clr) {
@@ -181,6 +204,7 @@ void JsonReader::ProcessFill(const json::Array& arr) {
     std::pair<std::vector<Stop>, std::map<std::pair<std::string, std::string>, double>> res1;
     std::vector<std::pair<std::string, std::deque<std::string>>> res2;
     std::map<std::string, AditionalInfo> aditional_info;
+
     for (auto& node : arr) {
         if (node.IsDict()) {
             const json::Dict& node_as_map = node.AsDict();
@@ -193,8 +217,11 @@ void JsonReader::ProcessFill(const json::Array& arr) {
             }
         }
     }
+
     TransportCatalogue::TransportCatalogue transport_catalogue(res1.first, res2, res1.second, aditional_info);
+
     transport_catalogue_ = std::move(transport_catalogue);
+
 }
 
 void JsonReader::LoadJSON(std::string s) {
@@ -220,8 +247,9 @@ void JsonReader::ProcessRequests(const json::Array& arr, std::ostream& os) {
 
     int id;
     std::string type = "Unknown"s;
-    std::string name;
-    std::vector<std::pair<int, std::pair<std::string, std::string>>> result;
+
+    RequestInfo request_info;
+    std::vector<std::pair<int, std::pair<std::string, RequestInfo>>> result;
     for (auto& Node : arr) {
         for (auto& [tag, value] : Node.AsDict()) {
             if (tag == "type"s && value.AsString() == "Bus"s) {
@@ -230,18 +258,26 @@ void JsonReader::ProcessRequests(const json::Array& arr, std::ostream& os) {
                 type = "Stop"s;
             } else if (tag == "type"s && value.AsString() == "Map"s) {
                 type = "Map"s;
+            } else if (tag == "type"s && value.AsString() == "Route"s) {
+                type = "Route"s;
             } else if (tag == "name"s) {
-                name = value.AsString();
+                request_info.name = value.AsString();
             } else if (tag == "id"s) {
                 id = value.AsInt();
+            } else if (tag == "from"s) {
+                request_info.from = value.AsString();
+            } else if (tag == "to"s) {
+                request_info.to = value.AsString();
             }
         }
-        result.push_back({id, {type, name}});
+        result.push_back({id, {type, request_info}});
     }
+
     JsonPrinter(result, os);
+
 }
 
-void JsonReader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, std::string>>>& requests, std::ostream& output) {
+void JsonReader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, RequestInfo>>>& requests, std::ostream& output) {
     if (!requests.empty()) {
         json::Builder builder;
         builder.StartArray();
@@ -250,20 +286,27 @@ void JsonReader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, s
             builder.StartDict();
             builder.Key("request_id"s).Value(item.first);
             if (item.second.first == "Bus"s) {
-                Print(transport_catalogue_.GetBusResponse(item.second.second), builder);
+                Print(transport_catalogue_.GetBusResponse(item.second.second.name), builder);
             } else if (item.second.first == "Stop"s) {
-                Print(transport_catalogue_.GetStopResponse(item.second.second), builder);
+                Print(transport_catalogue_.GetStopResponse(item.second.second.name), builder);
             } else if (item.second.first == "Map"s) {
                 MapRenderer r(render_settings_, transport_catalogue_);
                 svg::Document doc = r.Solve();
                 builder.Key("map"s).Value(r.PrintResult(doc));
+            } else if (item.second.first == "Route"s) {
+
+                Print(transport_catalogue_.GetRouteResponse(item.second.second.from, item.second.second.to), builder);
+
             } else if (item.second.first == "Unknown"s) {
                 builder.Key("error_message"s).Value("not found"s);
             }
             builder.EndDict();
         }
+
         builder.EndArray();
+
         json::Print(json::Document{builder.Build()}, output);
+
     }
 }
 
@@ -290,4 +333,42 @@ void JsonReader::Print(ResponseForStop&& response, json::Builder& builder) {
     } else {
         builder.Key("error_message"s).Value("not found");
     }
+}
+
+void JsonReader::Print(std::optional<graph::Router<double>::RouteInfo>&& route_info, json::Builder& builder) {
+
+    if (route_info) {
+        builder.Key("total_time"s).Value((*route_info).weight);
+
+        builder.Key("items"s).StartArray();
+        std::vector<graph::EdgeId>& edges = (*route_info).edges;
+        const graph::DirectedWeightedGraph<double>& graph = transport_catalogue_.GetGraph();
+        const std::unordered_map<size_t, std::string_view>& vertex_id_to_stopname = transport_catalogue_.GetVertexIdToStopName();
+
+        for (const auto& EdgeId : edges) {
+
+            graph::Edge<double> edge = graph.GetEdge(EdgeId);
+            graph::VertexId from = edge.from;
+            double weight = edge.weight;
+            int span_count = edge.span_count;
+            builder.StartDict();
+                builder.Key("stop_name"s).Value(string(vertex_id_to_stopname.at(from)));
+                builder.Key("time"s).Value(routing_settings_.bus_wait_time_);
+                builder.Key("type"s).Value("Wait"s);
+            builder.EndDict();
+            builder.StartDict();
+                builder.Key("bus"s).Value(string(edge.bus_name));
+                builder.Key("span_count"s).Value(span_count);
+                builder.Key("time"s).Value(static_cast<double>(weight - routing_settings_.bus_wait_time_));
+                builder.Key("type"s).Value("Bus"s);
+            builder.EndDict();
+
+        }
+        builder.EndArray();
+    } else {
+
+        builder.Key("error_message"s).Value("not found");
+
+    }
+
 }

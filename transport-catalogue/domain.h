@@ -7,6 +7,17 @@
 #include <string>
 #include <set>
 
+struct RoutingSettings {
+    int bus_wait_time_;
+    double bus_velocity;
+};
+
+struct RequestInfo {
+    std::string name;
+    std::string from;
+    std::string to;
+};
+
 struct Stop {
     std::string stop_name;
     geo::Coordinates stop_coords;

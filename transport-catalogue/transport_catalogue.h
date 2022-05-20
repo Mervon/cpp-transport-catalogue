@@ -2,6 +2,8 @@
 
 #include "geo.h"
 #include "domain.h"
+#include "graph.h"
+#include "router.h"
 
 #include <vector>
 #include <set>
@@ -24,6 +26,8 @@ public:
     struct MyHaser{
         size_t operator()(const std::pair<Stop*, Stop*>& p) const;
     };
+
+    void ProcessGraph(const RoutingSettings& routing_settings);
 
     TransportCatalogue() = default;
 
@@ -51,6 +55,14 @@ public:
 
     bool HaveBuses(const std::string& s);
 
+    const graph::DirectedWeightedGraph<double>& GetGraph();
+
+    const std::unordered_map<std::string_view, size_t>& GetStopNameToVertexId();
+
+    const std::unordered_map<size_t, std::string_view>& GetVertexIdToStopName();
+
+    std::optional<graph::Router<double>::RouteInfo> GetRouteResponse(std::string stop_name_1, std::string stop_name_2);
+
     const std::set<std::string_view>& GetBusesByStop(const std::string_view& stop_name) const;
 private:
 
@@ -61,5 +73,9 @@ private:
     std::unordered_map<std::pair<Stop*, Stop*>, double, MyHaser> real_distances_;
     std::unordered_map<std::string_view, std::set<std::string_view>> stopname_to_buses_;
     std::map<std::string, AditionalInfo> aditional_info_;
+    graph::DirectedWeightedGraph<double> graph_;
+    std::unique_ptr<graph::Router<double>> router_;
+    std::unordered_map<std::string_view, size_t> stopname_to_vertex_id_;
+    std::unordered_map<size_t, std::string_view> vertex_id_to_stopname_;
 };
 }

@@ -8,6 +8,9 @@
 #include <vector>
 #include <iterator>
 
+
+#include <iostream>
+
 using namespace std;
 
 namespace TransportCatalogue {
@@ -23,9 +26,54 @@ size_t TransportCatalogue::MyHaser::operator()(const std::pair<Stop*, Stop*>& p)
 }
 
 TransportCatalogue::TransportCatalogue(std::vector<Stop>& stops, std::vector<std::pair<std::string, std::deque<std::string>>>& buses, std::map<stops_key, double>& real_distances, map<string, AditionalInfo>& aditional_info) : aditional_info_(aditional_info) {
+
     InitStops(stops, real_distances);
+
     InitBuses(buses);
+
     InitStopnameToBuses();
+
+
+}
+
+std::optional<graph::Router<double>::RouteInfo> TransportCatalogue::GetRouteResponse(std::string stop_name_1, std::string stop_name_2) {
+
+    std::optional<graph::Router<double>::RouteInfo> result = (*router_).BuildRoute(stopname_to_vertex_id_[stop_name_1], stopname_to_vertex_id_[stop_name_2]);
+
+    return result;
+}
+
+void TransportCatalogue::ProcessGraph(const RoutingSettings& routing_settings) {
+    graph::DirectedWeightedGraph<double> graph(stops_.size());
+
+    for (auto& [name, bus] : busname_to_bus_) {
+        std::vector<Stop*>& bus_stops = bus->bus_stops;
+        if (bus_stops.size() < 2) {
+            return;
+        }
+
+
+        for (size_t i = 0; i < bus_stops.size(); ++i) {
+            double current_lenght = routing_settings.bus_wait_time_;
+            int span_count = 1;
+            size_t from = stopname_to_vertex_id_[bus_stops[i]->stop_name];
+            for (size_t j = i + 1; j < bus_stops.size(); ++j) {
+                size_t to = stopname_to_vertex_id_[bus_stops[j]->stop_name];
+                auto candidat = real_distances_[{bus_stops[j - 1], bus_stops[j]}];
+                if (candidat == 0) {
+                    candidat = real_distances_[{bus_stops[j], bus_stops[j - 1]}];
+                }
+
+                current_lenght += candidat / 1000.0 / routing_settings.bus_velocity * 60.0;
+                graph.AddEdge(graph::Edge<double>{from, to, current_lenght, name, span_count++});
+            }
+        }
+        graph_ = graph;
+
+
+    }
+    graph_ = move(graph);
+    router_ = std::unique_ptr<graph::Router<double>>(new graph::Router<double>(graph_));
 }
 
 ::ResponseForBus TransportCatalogue::GetBusResponse(const std::string& bus_name) const {
@@ -82,9 +130,12 @@ void TransportCatalogue::InitStopnameToBuses() {
 }
 
 void TransportCatalogue::InitStops(std::vector<Stop>& stops, std::map<stops_key, double>& real_distances) {
+    size_t unique_vertex_id = 0;
     for (auto& stop : stops) {
         stops_.push_back(stop);
         stopname_to_stop_[stops_.back().stop_name] = &(stops_.back());
+        stopname_to_vertex_id_[stops_.back().stop_name] = unique_vertex_id;
+        vertex_id_to_stopname_[unique_vertex_id++] = stops_.back().stop_name;
     }
     for (auto& distance : real_distances) {
         real_distances_[{(*(stopname_to_stop_.find(distance.first.first))).second, (*(stopname_to_stop_.find(distance.first.second))).second}] = distance.second;
@@ -160,6 +211,14 @@ std::deque<Stop> TransportCatalogue::GetAllStopsSortedByName() const {
     return stops_copy;
 }
 
+const std::unordered_map<std::string_view, size_t>& TransportCatalogue::GetStopNameToVertexId() {
+    return stopname_to_vertex_id_;
+}
+
+const std::unordered_map<size_t, std::string_view>& TransportCatalogue::GetVertexIdToStopName() {
+    return vertex_id_to_stopname_;
+}
+
 bool TransportCatalogue::HaveBuses(const std::string& s) {
     if (stopname_to_buses_.find(s) != stopname_to_buses_.end()) {
         if (stopname_to_buses_.at(s).size() != 0) {
@@ -171,6 +230,10 @@ bool TransportCatalogue::HaveBuses(const std::string& s) {
 
 const std::set<std::string_view>& TransportCatalogue::GetBusesByStop(const std::string_view& stop_name) const {
     return stopname_to_buses_.at(stop_name);
+}
+
+const graph::DirectedWeightedGraph<double>& TransportCatalogue::GetGraph() {
+    return graph_;
 }
 
 }
