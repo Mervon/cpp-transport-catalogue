@@ -38,21 +38,18 @@ TransportCatalogue::TransportCatalogue(std::vector<Stop>& stops, std::vector<std
 
 std::optional<graph::Router<double>::RouteInfo> TransportCatalogue::GetRouteResponse(std::string stop_name_1, std::string stop_name_2) {
 
-    std::optional<graph::Router<double>::RouteInfo> result = (*router_).BuildRoute(stopname_to_vertex_id_[stop_name_1], stopname_to_vertex_id_[stop_name_2]);
+    std::optional<graph::Router<double>::RouteInfo> result = (*(transport_router_.GetRouter())).BuildRoute(stopname_to_vertex_id_[stop_name_1], stopname_to_vertex_id_[stop_name_2]);
 
     return result;
 }
 
 void TransportCatalogue::ProcessGraph(const RoutingSettings& routing_settings) {
     graph::DirectedWeightedGraph<double> graph(stops_.size());
-
     for (auto& [name, bus] : busname_to_bus_) {
         std::vector<Stop*>& bus_stops = bus->bus_stops;
         if (bus_stops.size() < 2) {
             return;
         }
-
-
         for (size_t i = 0; i < bus_stops.size(); ++i) {
             double current_lenght = routing_settings.bus_wait_time_;
             int span_count = 1;
@@ -63,18 +60,17 @@ void TransportCatalogue::ProcessGraph(const RoutingSettings& routing_settings) {
                 if (candidat == 0) {
                     candidat = real_distances_[{bus_stops[j], bus_stops[j - 1]}];
                 }
-
                 current_lenght += candidat / 1000.0 / routing_settings.bus_velocity * 60.0;
                 graph.AddEdge(graph::Edge<double>{from, to, current_lenght, name, span_count++});
             }
         }
-        graph_ = graph;
-
-
     }
     graph_ = move(graph);
-    router_ = std::unique_ptr<graph::Router<double>>(new graph::Router<double>(graph_));
+
+    transport_router_.ProcessRouter(graph_);
 }
+
+
 
 ::ResponseForBus TransportCatalogue::GetBusResponse(const std::string& bus_name) const {
     ResponseForBus result;

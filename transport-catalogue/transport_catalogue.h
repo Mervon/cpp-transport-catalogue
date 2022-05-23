@@ -3,7 +3,7 @@
 #include "geo.h"
 #include "domain.h"
 #include "graph.h"
-#include "router.h"
+#include "transport_router.h"
 
 #include <vector>
 #include <set>
@@ -74,7 +74,7 @@ private:
     std::unordered_map<std::string_view, std::set<std::string_view>> stopname_to_buses_;
     std::map<std::string, AditionalInfo> aditional_info_;
     graph::DirectedWeightedGraph<double> graph_;
-    std::unique_ptr<graph::Router<double>> router_;
+    graph::TransportRouter transport_router_;
     std::unordered_map<std::string_view, size_t> stopname_to_vertex_id_;
     std::unordered_map<size_t, std::string_view> vertex_id_to_stopname_;
 };
