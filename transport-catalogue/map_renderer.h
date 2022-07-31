@@ -20,7 +20,7 @@ struct RenderSettings{
     std::pair<double, double> stop_label_offset;
     svg::Color underlayer_color;
     double underlayer_width;
-    std::vector <svg::Color> color_palette;
+    std::vector<svg::Color> color_palette;
 };
 
 bool IsZero(double value);
@@ -103,4 +103,3 @@ private:
     void DrawStopNames(svg::Document& document, std::deque<Stop>& stops);
     void DrawCircles(svg::Document& document, std::deque<Stop>& stops);
 };
-

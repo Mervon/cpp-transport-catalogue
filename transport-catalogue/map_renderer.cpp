@@ -23,9 +23,6 @@ svg::Document MapRenderer::Solve() {
 string MapRenderer::PrintResult(svg::Document& document) {
     ostringstream os2;
     document.Render(os2);
-    /*json::Node node(os2.str());
-    json::Document doc(node);
-    json::Print(doc, os);*/
     return os2.str();
 }
 

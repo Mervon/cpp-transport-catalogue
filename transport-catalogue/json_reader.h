@@ -5,6 +5,7 @@
 #include "map_renderer.h"
 #include "json_builder.h"
 
+#include <filesystem>
 #include <utility>
 #include <string>
 #include <sstream>
@@ -12,8 +13,15 @@
 #include <map>
 #include <algorithm>
 
+enum WorkModes {
+	MakeBase,
+	ProcessRequests
+};
+
 class JsonReader {
 public:
+	using Path = std::filesystem::path;
+	
     JsonReader() = default;
 
     JsonReader(json::Document d);
@@ -21,6 +29,8 @@ public:
     JsonReader(std::string s);
 
     JsonReader(std::istream& is, std::ostream& os);
+    
+    JsonReader(const WorkModes& work_mode);
 
     std::string Print();
 
@@ -29,8 +39,9 @@ private:
     RenderSettings render_settings_;
     RoutingSettings routing_settings_;
     TransportCatalogue::TransportCatalogue transport_catalogue_;
+    Path path_;
 
-    void Solve(std::ostream& os);
+    void MakeBase();
 
     void FillStop(const json::Dict& dict, std::string& name, std::pair<std::vector<Stop>, std::map<std::pair<std::string, std::string>, double>>& result);
 

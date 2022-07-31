@@ -32,14 +32,12 @@ TransportCatalogue::TransportCatalogue(std::vector<Stop>& stops, std::vector<std
     InitBuses(buses);
 
     InitStopnameToBuses();
-
-
 }
 
 std::optional<graph::Router<double>::RouteInfo> TransportCatalogue::GetRouteResponse(std::string stop_name_1, std::string stop_name_2) {
-
+	
     std::optional<graph::Router<double>::RouteInfo> result = (*(transport_router_.GetRouter())).BuildRoute(stopname_to_vertex_id_[stop_name_1], stopname_to_vertex_id_[stop_name_2]);
-
+    
     return result;
 }
 
@@ -230,6 +228,52 @@ const std::set<std::string_view>& TransportCatalogue::GetBusesByStop(const std::
 
 const graph::DirectedWeightedGraph<double>& TransportCatalogue::GetGraph() {
     return graph_;
+}
+
+const std::deque<Bus>& TransportCatalogue::GetAllBuses() const {
+	return buses_;
+}
+
+const std::deque<Stop>& TransportCatalogue::GetAllStops() const {
+	return stops_;
+}
+
+void TransportCatalogue::SetStops(std::deque<Stop>& stops) {
+	stops_ = std::move(stops);
+}
+
+void TransportCatalogue::SetBuses(std::deque<Bus>& buses) {
+	buses_ = std::move(buses);
+}
+
+void TransportCatalogue::SetStopname_to_stop(std::unordered_map<std::string_view, Stop*>& stopname_to_stop) {
+	stopname_to_stop_ = std::move(stopname_to_stop);
+}
+
+void TransportCatalogue::Setbusname_to_bus(std::unordered_map<std::string_view, Bus*>& busname_to_bus) {
+	busname_to_bus_ = std::move(busname_to_bus);
+}
+
+void TransportCatalogue::SetAditionalinfo(std::map<std::string, AditionalInfo>& aditional_info) {
+	aditional_info_ = std::move(aditional_info);
+}
+
+void TransportCatalogue::SetGraph(graph::DirectedWeightedGraph<double>& graph) {
+	graph_ = std::move(graph);
+	transport_router_.ProcessRouter(graph_);
+}
+
+const std::unordered_map<std::string_view, Bus*>& TransportCatalogue::GetBusnameToBus() const {
+	return busname_to_bus_;
+}
+
+const std::unordered_map<std::string_view, Stop*>& TransportCatalogue::GetStopNameToStop() const {
+	return stopname_to_stop_;
+}
+
+void TransportCatalogue::SetStopNameToVertexId(std::unordered_map<std::string_view, size_t>& stopname_to_vertex_id, std::unordered_map<size_t, std::string_view> vertex_id_to_stopname) {
+	stopname_to_vertex_id_ = std::move(stopname_to_vertex_id);
+	vertex_id_to_stopname_ = std::move(vertex_id_to_stopname);
 }
 
 }

@@ -2,7 +2,10 @@
 #include "json.h"
 #include "transport_catalogue.h"
 #include "map_renderer.h"
+#include "serialization.h"
 
+#include <fstream>
+#include <filesystem>
 #include <cassert>
 #include <utility>
 #include <string>
@@ -11,6 +14,7 @@
 #include <map>
 #include <algorithm>
 
+
 using namespace std;
 
 JsonReader::JsonReader(json::Document d) : main_document_(std::move(d)) {
@@ -18,12 +22,42 @@ JsonReader::JsonReader(json::Document d) : main_document_(std::move(d)) {
 }
 
 JsonReader::JsonReader(std::string s) {
-     LoadJSON(s);
+    LoadJSON(s);
 }
 
 JsonReader::JsonReader(std::istream& is, std::ostream& os) {
-     main_document_ = json::Load(is);
-     Solve(os);
+    main_document_ = json::Load(is);
+}
+
+JsonReader::JsonReader(const WorkModes& work_mode) {
+	switch(work_mode) {
+		case WorkModes::MakeBase: {
+			
+			main_document_ = json::Load(std::cin);
+			
+			path_ = main_document_.GetRoot().AsDict().at("serialization_settings"s).AsDict().at("file"s).AsString();
+			
+			MakeBase();
+			
+			Serialisation::Serialise(transport_catalogue_, render_settings_, routing_settings_, path_);
+			
+			break;
+		}
+		case WorkModes::ProcessRequests: {
+			
+			main_document_ = json::Load(std::cin);
+			
+			path_ = main_document_.GetRoot().AsDict().at("serialization_settings"s).AsDict().at("file"s).AsString();
+			
+			Serialisation::Deserialise(transport_catalogue_, render_settings_, routing_settings_, path_);
+			
+			ProcessRequests(main_document_.GetRoot().AsDict().at("stat_requests"s).AsArray(), std::cout);
+			
+			break;
+		}
+		default: break;
+	}
+
 }
 
 std::string JsonReader::Print() {
@@ -32,30 +66,14 @@ std::string JsonReader::Print() {
     return os.str();
 }
 
-void JsonReader::Solve(std::ostream& os) {
-    if (main_document_.GetRoot().IsDict()) {
-        if (main_document_.GetRoot().AsDict().size() == 4) {
-            for (auto& [key, arr] : main_document_.GetRoot().AsDict()) {
-                if (key == "base_requests"s) {
-
-                    ProcessFill(arr.AsArray());
-
-                } else if (key == "render_settings"s){
-
-                    render_settings_ = ProcessRenderSettings(arr.AsDict());
-
-                } else if (key == "stat_requests"s) {
-
-                    ProcessRequests(arr.AsArray(), os);
-
-                } else if (key == "routing_settings") {
-
-                    transport_catalogue_.ProcessGraph(ProcessRoutingSettings(arr.AsDict()));
-
-                }
-            }
-        }
-    }
+void JsonReader::MakeBase() {
+	
+	ProcessFill(main_document_.GetRoot().AsDict().at("base_requests"s).AsArray());
+	
+	render_settings_ = ProcessRenderSettings(main_document_.GetRoot().AsDict().at("render_settings"s).AsDict());
+	
+	transport_catalogue_.ProcessGraph(ProcessRoutingSettings(main_document_.GetRoot().AsDict().at("routing_settings"s).AsDict()));
+	
 }
 
 RoutingSettings& JsonReader::ProcessRoutingSettings(const json::Dict& dict) {
@@ -244,7 +262,7 @@ std::pair<std::string, std::string> JsonReader::CheckTypeAndName(const json::Dic
 }
 
 void JsonReader::ProcessRequests(const json::Array& arr, std::ostream& os) {
-
+	
     int id;
     std::string type = "Unknown"s;
 
@@ -278,10 +296,11 @@ void JsonReader::ProcessRequests(const json::Array& arr, std::ostream& os) {
 }
 
 void JsonReader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, RequestInfo>>>& requests, std::ostream& output) {
+	
     if (!requests.empty()) {
         json::Builder builder;
         builder.StartArray();
-
+        
         for (auto& item : requests) {
             builder.StartDict();
             builder.Key("request_id"s).Value(item.first);
@@ -294,11 +313,11 @@ void JsonReader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, R
                 svg::Document doc = r.Solve();
                 builder.Key("map"s).Value(r.PrintResult(doc));
             } else if (item.second.first == "Route"s) {
-
+            	
                 Print(transport_catalogue_.GetRouteResponse(item.second.second.from, item.second.second.to), builder);
-
+                
             } else if (item.second.first == "Unknown"s) {
-                builder.Key("error_message"s).Value("not found"s);
+                builder.Key("error_message"s).Value(json::Node{"not found"s});
             }
             builder.EndDict();
         }
@@ -308,6 +327,7 @@ void JsonReader::JsonPrinter(std::vector<std::pair<int, std::pair<std::string, R
         json::Print(json::Document{builder.Build()}, output);
 
     }
+    
 }
 
 void JsonReader::Print(ResponseForBus&& response, json::Builder& builder) {
@@ -317,7 +337,7 @@ void JsonReader::Print(ResponseForBus&& response, json::Builder& builder) {
         builder.Key("stop_count"s).Value(static_cast<int>(response.stops_count));
         builder.Key("unique_stop_count"s).Value(static_cast<int>(response.unique_stops_count));
     } else {
-        builder.Key("error_message"s).Value("not found"s);
+        builder.Key("error_message"s).Value(json::Node{"not found"s});
     }
 }
 
@@ -331,12 +351,12 @@ void JsonReader::Print(ResponseForStop&& response, json::Builder& builder) {
         }
         builder.EndArray();
     } else {
-        builder.Key("error_message"s).Value("not found");
+        builder.Key("error_message"s).Value(json::Node{"not found"s});
     }
 }
 
 void JsonReader::Print(std::optional<graph::Router<double>::RouteInfo>&& route_info, json::Builder& builder) {
-
+	
     if (route_info) {
         builder.Key("total_time"s).Value((*route_info).weight);
 
@@ -344,15 +364,18 @@ void JsonReader::Print(std::optional<graph::Router<double>::RouteInfo>&& route_i
         std::vector<graph::EdgeId>& edges = (*route_info).edges;
         const graph::DirectedWeightedGraph<double>& graph = transport_catalogue_.GetGraph();
         const std::unordered_map<size_t, std::string_view>& vertex_id_to_stopname = transport_catalogue_.GetVertexIdToStopName();
-
+        
         for (const auto& EdgeId : edges) {
-
+        	
             graph::Edge<double> edge = graph.GetEdge(EdgeId);
             graph::VertexId from = edge.from;
             double weight = edge.weight;
             int span_count = edge.span_count;
+            
             builder.StartDict();
+           
                 builder.Key("stop_name"s).Value(string(vertex_id_to_stopname.at(from)));
+                
                 builder.Key("time"s).Value(routing_settings_.bus_wait_time_);
                 builder.Key("type"s).Value("Wait"s);
             builder.EndDict();
@@ -362,13 +385,15 @@ void JsonReader::Print(std::optional<graph::Router<double>::RouteInfo>&& route_i
                 builder.Key("time"s).Value(static_cast<double>(weight - routing_settings_.bus_wait_time_));
                 builder.Key("type"s).Value("Bus"s);
             builder.EndDict();
+            
 
         }
         builder.EndArray();
     } else {
 
-        builder.Key("error_message"s).Value("not found");
+        builder.Key("error_message"s).Value(json::Node{"not found"s});
 
     }
+   
 
 }
